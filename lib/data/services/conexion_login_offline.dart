@@ -5,7 +5,7 @@ import 'package:ferti_go/data/services/database_helper.dart';
 import 'package:ferti_go/data/services/connectivity_service.dart';
 
 class ConexionLoginOffline {
-  static final String baseUrl = 'http://192.168.137.34:8080/app';
+  static final String baseUrl = 'http://10.128.182.210:8080/app';
   static final DatabaseHelper _dbHelper = DatabaseHelper();
   static final ConnectivityService _connectivityService = ConnectivityService();
 

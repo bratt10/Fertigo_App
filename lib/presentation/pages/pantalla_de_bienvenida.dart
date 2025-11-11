@@ -1,8 +1,8 @@
 import 'package:ferti_go/presentation/pages/login.dart';
 import 'package:flutter/material.dart';
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
+class PantallaDeBienvenida extends StatelessWidget {
+  const PantallaDeBienvenida({super.key});
 
   @override
   Widget build(BuildContext context) {

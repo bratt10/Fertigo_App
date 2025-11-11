@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SolicitudFertilizanteService {
-  static final String baseUrl = "http://192.168.137.34:8080";
+  static final String baseUrl = "http://10.128.182.210:8080";
 
   Future<List<String>> obtenerTiposFertilizantes() async {
     final response = await http.get(Uri.parse('$baseUrl/fertilizante'));

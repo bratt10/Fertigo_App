@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ferti_go/presentation/pages/login.dart';
-import 'package:ferti_go/data/services/sync_manager.dart'; // Importar
+import 'package:ferti_go/data/services/sync_manager.dart'; 
+import 'package:ferti_go/presentation/pages/pantalla_de_bienvenida.dart'; //importa tu nueva pantalla
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: const PantallaDeBienvenida(),
       debugShowCheckedModeBanner: false,
     );
   }
