@@ -9,69 +9,65 @@ class ConnectivityService {
 
   final Connectivity _connectivity = Connectivity();
   
-  // ✅ Stream mejorado para detectar cambios
   Stream<bool> get onConnectivityChanged =>
       _connectivity.onConnectivityChanged.asyncMap((_) => checkConnection());
 
-  /// Verifica si hay conexión a internet real (no solo WiFi/datos activados)
+  /// Verifica conexión directa al servidor backend
   Future<bool> checkConnection() async {
-    try {
-      // 1. Verificar conectividad básica
-      final connectivityResult = await _connectivity.checkConnectivity();
-      
-      // ✅ Compatible con versiones antiguas de connectivity_plus
-      if (connectivityResult == ConnectivityResult.none) {
-        print('❌ Sin conexión: Modo avión o sin red');
-        return false;
-      }
-
-      // 2. Hacer ping real para confirmar internet
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 5));
-          
-      if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
-        print('✅ Conexión a internet confirmada');
-        return true;
-      }
-      
-      return false;
-    } on SocketException catch (_) {
-      print('❌ Sin internet: Ping falló');
-      return false;
-    } catch (e) {
-      print('❌ Error verificando conexión: $e');
-      return false;
-    }
+    return await checkServerConnection();
   }
 
-  /// Verifica si puede conectarse al servidor de Ferti-Go
+  /// Verifica si el servidor está accesible
   Future<bool> checkServerConnection() async {
     try {
-      // ✅ Usar la IP correcta de tus logs
       final socket = await Socket.connect(
-        '192.168.137.34', // Esta es la IP que funciona según tus logs
+        '192.168.1.25',
         8080,
-        timeout: const Duration(seconds: 5),
+        timeout: const Duration(seconds: 2),
       );
+      
       socket.destroy();
-      print('✅ Servidor Ferti-Go alcanzable');
+      print('Servidor disponible');
       return true;
+      
+    } on SocketException catch (e) {
+      print('Servidor inaccesible: ${e.message}');
+      return false;
+    } on TimeoutException catch (_) {
+      print('Timeout conectando al servidor');
+      return false;
     } catch (e) {
-      print('❌ Servidor Ferti-Go inaccesible: $e');
+      print('Error: $e');
       return false;
     }
   }
 
-  /// ✅ NUEVO: Verificar estado actual sin timeout largo
+  /// Verifica si hay WiFi o datos móviles activados
   Future<bool> checkConnectionFast() async {
     try {
       final connectivityResult = await _connectivity.checkConnectivity();
-      
-      // ✅ Compatible con versiones antiguas
       return connectivityResult == ConnectivityResult.mobile ||
              connectivityResult == ConnectivityResult.wifi;
     } catch (e) {
       return false;
     }
+  }
+  
+  /// Reintenta conexión al servidor (útil para redes inestables)
+  Future<bool> checkServerConnectionWithRetry({int maxRetries = 2}) async {
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      final connected = await checkServerConnection();
+      
+      if (connected) {
+        return true;
+      }
+      
+      if (attempt < maxRetries) {
+        await Future.delayed(const Duration(milliseconds: 800));
+      }
+    }
+    
+    print('Servidor inaccesible después de $maxRetries intentos');
+    return false;
   }
 }

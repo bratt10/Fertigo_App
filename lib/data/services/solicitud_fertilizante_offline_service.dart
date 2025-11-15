@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SolicitudFertilizanteOfflineService {
-  static final String baseUrl = "http://10.128.182.210:8080";
+  static final String baseUrl = "http://192.168.1.25:8080";
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ConnectivityService _connectivityService = ConnectivityService();
 
@@ -17,7 +17,7 @@ class SolicitudFertilizanteOfflineService {
     
     if (hayConexion) {
       try {
-        print('🌍 Obteniendo fertilizantes desde servidor...');
+        print('Obteniendo fertilizantes desde servidor...');
         final response = await http.get(Uri.parse('$baseUrl/fertilizante'))
             .timeout(const Duration(seconds: 10));
             
@@ -25,19 +25,17 @@ class SolicitudFertilizanteOfflineService {
           final List<dynamic> data = json.decode(response.body);
           final tipos = data.map((item) => item['nombre'].toString()).toList();
           
-          // Guardar en cache
           await _dbHelper.guardarFertilizantesCache(tipos);
           
-          print('✅ ${tipos.length} fertilizantes obtenidos y cacheados');
+          print('${tipos.length} fertilizantes obtenidos y cacheados');
           return tipos;
         }
       } catch (e) {
-        print('⚠️ Error obteniendo fertilizantes online: $e');
+        print('Error obteniendo fertilizantes online: $e');
       }
     }
     
-    // Modo offline: usar cache
-    print('📱 Usando cache de fertilizantes (modo offline)');
+    print('Usando cache de fertilizantes (modo offline)');
     final cache = await _dbHelper.obtenerFertilizantesCache();
     
     if (cache.isEmpty) {
@@ -61,9 +59,8 @@ class SolicitudFertilizanteOfflineService {
     final hayConexion = await _connectivityService.checkServerConnection();
     
     if (hayConexion) {
-      // ✅ MODO ONLINE: Enviar directamente al servidor
       try {
-        print('🌍 Enviando solicitud al servidor...');
+        print('Enviando solicitud al servidor...');
         
         final response = await http.post(
           Uri.parse('$baseUrl/solicitudFertilizante/$idUsuario'),
@@ -72,7 +69,7 @@ class SolicitudFertilizanteOfflineService {
         ).timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200 || response.statusCode == 201) {
-          print('✅ Solicitud enviada exitosamente al servidor');
+          print('Solicitud enviada exitosamente al servidor');
           
           return {
             'exito': true,
@@ -83,15 +80,13 @@ class SolicitudFertilizanteOfflineService {
           throw Exception("Error del servidor: ${response.body}");
         }
       } catch (e) {
-        print('⚠️ Error enviando online: $e');
-        print('💾 Guardando en cola offline...');
+        print('Error enviando online: $e');
+        print('Guardando en cola offline...');
         
-        // Si falla online, guardar offline
         return await _guardarSolicitudOffline(solicitud, idUsuario);
       }
     } else {
-      // ✅ MODO OFFLINE: Guardar en SQLite para sincronizar después
-      print('📱 Sin conexión, guardando solicitud offline...');
+      print('Sin conexión, guardando solicitud offline...');
       return await _guardarSolicitudOffline(solicitud, idUsuario);
     }
   }
@@ -124,12 +119,12 @@ class SolicitudFertilizanteOfflineService {
   // ==================== SINCRONIZAR SOLICITUDES PENDIENTES ====================
   
   Future<Map<String, dynamic>> sincronizarSolicitudesPendientes() async {
-    print('\n🔄 ============ SINCRONIZACIÓN ============');
+    print('\n============ SINCRONIZACIÓN ============');
     
     final hayConexion = await _connectivityService.checkServerConnection();
     
     if (!hayConexion) {
-      print('   ❌ Sin conexión, sincronización cancelada');
+      print('   Sin conexión, sincronización cancelada');
       return {
         'exito': false,
         'mensaje': 'Sin conexión a internet',
@@ -145,10 +140,10 @@ class SolicitudFertilizanteOfflineService {
     }
 
     final pendientes = await _dbHelper.obtenerSolicitudesPendientes(idUsuario);
-    print('   📦 Solicitudes pendientes: ${pendientes.length}');
+    print('   Solicitudes pendientes: ${pendientes.length}');
 
     if (pendientes.isEmpty) {
-      print('   ✅ No hay solicitudes pendientes');
+      print('   No hay solicitudes pendientes');
       return {
         'exito': true,
         'sincronizadas': 0,
@@ -161,7 +156,7 @@ class SolicitudFertilizanteOfflineService {
 
     for (var solicitudLocal in pendientes) {
       try {
-        print('   🔃 Sincronizando solicitud local #${solicitudLocal['id']}...');
+        print('   Sincronizando solicitud local #${solicitudLocal['id']}...');
         
         final solicitud = SolicitudFertilizante(
           tipoFertilizante: solicitudLocal['tipoFertilizante'],
@@ -179,21 +174,22 @@ class SolicitudFertilizanteOfflineService {
         ).timeout(const Duration(seconds: 10));
 
         if (response.statusCode == 200 || response.statusCode == 201) {
-          await _dbHelper.marcarComoSincronizado(solicitudLocal['id']);
+          // FIX: Cambiar de marcarComoSincronizado a eliminarSolicitudPendiente
+          await _dbHelper.eliminarSolicitudPendiente(solicitudLocal['id']);
           exitosas++;
-          print('   ✅ Solicitud #${solicitudLocal['id']} sincronizada');
+          print('   Solicitud #${solicitudLocal['id']} sincronizada y eliminada');
         } else {
           fallidas++;
-          print('   ❌ Error sincronizando #${solicitudLocal['id']}: ${response.body}');
+          print('   Error sincronizando #${solicitudLocal['id']}: ${response.body}');
         }
       } catch (e) {
         fallidas++;
-        print('   ❌ Excepción sincronizando #${solicitudLocal['id']}: $e');
+        print('   Excepción sincronizando #${solicitudLocal['id']}: $e');
       }
     }
 
-    print('   📊 Resultado: $exitosas exitosas, $fallidas fallidas');
-    print('🔄 ============ FIN SINCRONIZACIÓN ============\n');
+    print('   Resultado: $exitosas exitosas, $fallidas fallidas');
+    print('============ FIN SINCRONIZACIÓN ============\n');
 
     return {
       'exito': exitosas > 0,
@@ -211,5 +207,14 @@ class SolicitudFertilizanteOfflineService {
     
     final pendientes = await _dbHelper.obtenerSolicitudesPendientes(idUsuario);
     return pendientes.length;
+  }
+  
+  // Método para limpiar solicitudes ya sincronizadas
+  Future<void> limpiarSolicitudesSincronizadas() async {
+    final idUsuario = UsuarioSesion.id;
+    if (idUsuario == null) return;
+    
+    await _dbHelper.limpiarSolicitudesSincronizadas(idUsuario);
+    print('Solicitudes sincronizadas limpiadas');
   }
 }

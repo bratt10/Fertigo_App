@@ -1,7 +1,7 @@
 
 class ApiConfig {
   // Usa la IP que esté funcionando en tu red
-  static const String baseUrl = "http://10.20.218.210:8080";
+  static const String baseUrl = "http://192.168.1.25:8080";
   
   // Endpoints
   static const String login = "$baseUrl/Login";

@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class NovedadesService {
-  static final String apiUrl = "http://10.128.182.210:8080/novedades";
+  static final String apiUrl = "http://192.168.1.25:8080/novedades";
 
   static Future<bool> enviarNovedad({
     required String nombre,

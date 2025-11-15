@@ -18,20 +18,19 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'ferti_go.db');
 
-    print('📂 Ruta de base de datos: $path');
+    print('Ruta de base de datos: $path');
 
     return await openDatabase(
       path,
-      version: 2, // ✅ Incrementar versión para forzar actualización
+      version: 2,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    print('🔨 Creando base de datos v$version...');
+    print('Creando base de datos v$version...');
     
-    // ✅ Tabla de usuarios (credenciales offline)
     await db.execute('''
       CREATE TABLE usuarios (
         id INTEGER PRIMARY KEY,
@@ -43,7 +42,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // ✅ Tabla de solicitudes offline (pendientes de sincronizar)
     await db.execute('''
       CREATE TABLE solicitudes_pendientes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,11 +61,10 @@ class DatabaseHelper {
       )
     ''');
 
-    // ✅ Tabla de solicitudes sincronizadas (cache)
     await db.execute('''
       CREATE TABLE solicitudes_cache (
         idSolicitud INTEGER PRIMARY KEY,
-        idUsuario INTEGER NOT NULL,
+        sidUsuario INTEGER NOT NULL,
         tipoFertilizante TEXT NOT NULL,
         cantidad REAL NOT NULL,
         fechaRequerida TEXT NOT NULL,
@@ -81,7 +78,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // ✅ Tabla de tipos de fertilizantes (cache)
     await db.execute('''
       CREATE TABLE fertilizantes_cache (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,30 +86,30 @@ class DatabaseHelper {
       )
     ''');
 
-    print('✅ Base de datos creada exitosamente');
+    print('Base de datos creada exitosamente');
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    print('🔄 Actualizando base de datos de v$oldVersion a v$newVersion');
-    // Aquí puedes agregar migraciones si es necesario
+    print('Actualizando base de datos de v$oldVersion a v$newVersion');
   }
 
-  // ==================== MÉTODOS DE USUARIOS ====================
+  // ==================== MÉTODOS DE USUARIOS (CORREGIDOS) ====================
   
   Future<void> guardarUsuario(Map<String, dynamic> usuario) async {
     try {
       final db = await database;
       
+      // Normalizar email a minúsculas al guardar
       final datos = {
         'id': usuario['id'],
         'nombre': usuario['nombre'],
-        'email': usuario['email'],
-        'contrasena': usuario['contraseña'] ?? usuario['contrasena'], // ✅ Ambas formas
+        'email': (usuario['email'] as String).toLowerCase(), // FIX: Siempre minúsculas
+        'contrasena': usuario['contraseña'] ?? usuario['contrasena'],
         'rol': usuario['rol'],
         'fechaGuardado': DateTime.now().toIso8601String(),
       };
 
-      print('💾 Intentando guardar usuario: ${datos['email']}');
+      print('Guardando usuario: ${datos['email']}');
       
       await db.insert(
         'usuarios',
@@ -121,43 +117,45 @@ class DatabaseHelper {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
       
-      print('✅ Usuario guardado en SQLite exitosamente');
+      print('Usuario guardado en SQLite exitosamente');
       
-      // ✅ Verificar que se guardó correctamente
+      // Verificar que se guardó correctamente
       final verificacion = await obtenerUsuarioPorEmail(datos['email']);
       if (verificacion != null) {
-        print('✅ Verificación exitosa: Usuario encontrado en BD');
+        print('Verificación exitosa: Usuario encontrado en BD');
       } else {
-        print('⚠️ WARNING: Usuario no encontrado después de guardar');
+        print('WARNING: Usuario no encontrado después de guardar');
       }
       
     } catch (e) {
-      print('❌ ERROR guardando usuario: $e');
+      print('ERROR guardando usuario: $e');
       rethrow;
     }
   }
 
+  /// FIX: Búsqueda case-insensitive usando LOWER()
   Future<Map<String, dynamic>?> obtenerUsuarioPorEmail(String email) async {
     try {
       final db = await database;
       
-      print('🔍 Buscando usuario: $email');
+      print('Buscando usuario: $email');
       
+      // FIX: Buscar usando LOWER() para ignorar mayúsculas/minúsculas
       final result = await db.query(
         'usuarios',
-        where: 'email = ?',
-        whereArgs: [email],
+        where: 'LOWER(email) = ?',
+        whereArgs: [email.toLowerCase()],
       );
       
       if (result.isNotEmpty) {
-        print('✅ Usuario encontrado: ${result.first['nombre']}');
+        print('Usuario encontrado: ${result.first['nombre']}');
         return result.first;
       } else {
-        print('❌ Usuario NO encontrado en BD');
+        print('Usuario NO encontrado en BD');
         
-        // ✅ Debug: Listar todos los usuarios
+        // Debug: Listar todos los usuarios
         final todosLosUsuarios = await db.query('usuarios');
-        print('📋 Total usuarios en BD: ${todosLosUsuarios.length}');
+        print('Total usuarios en BD: ${todosLosUsuarios.length}');
         for (var u in todosLosUsuarios) {
           print('   - ${u['email']} (ID: ${u['id']})');
         }
@@ -165,20 +163,22 @@ class DatabaseHelper {
         return null;
       }
     } catch (e) {
-      print('❌ ERROR obteniendo usuario: $e');
+      print('ERROR obteniendo usuario: $e');
       return null;
     }
   }
 
+  /// FIX: Validación case-insensitive
   Future<bool> validarCredencialesOffline(String email, String password) async {
     try {
-      print('🔐 Validando credenciales offline...');
+      print('Validando credenciales offline...');
       print('   Email: $email');
       
+      // FIX: obtenerUsuarioPorEmail ya normaliza el email
       final usuario = await obtenerUsuarioPorEmail(email);
       
       if (usuario == null) {
-        print('❌ Usuario no existe en BD local');
+        print('Usuario no existe en BD local');
         return false;
       }
       
@@ -191,7 +191,7 @@ class DatabaseHelper {
       return passwordMatch && rolMatch;
       
     } catch (e) {
-      print('❌ ERROR validando credenciales: $e');
+      print('ERROR validando credenciales: $e');
       return false;
     }
   }
@@ -210,7 +210,7 @@ class DatabaseHelper {
       },
     );
     
-    print('✅ Solicitud guardada offline (ID local: $id)');
+    print('Solicitud guardada offline (ID local: $id)');
     return id;
   }
 
@@ -225,17 +225,28 @@ class DatabaseHelper {
     );
   }
 
-  Future<void> marcarComoSincronizado(int idLocal) async {
+  Future<void> eliminarSolicitudPendiente(int idLocal) async {
     final db = await database;
     
-    // ✅ ELIMINAR en lugar de marcar (evita duplicados)
     await db.delete(
       'solicitudes_pendientes',
       where: 'id = ?',
       whereArgs: [idLocal],
     );
     
-    print('✅ Solicitud #$idLocal eliminada de pendientes');
+    print('Solicitud #$idLocal eliminada de pendientes');
+  }
+
+  Future<void> limpiarSolicitudesSincronizadas(int idUsuario) async {
+    final db = await database;
+    
+    final eliminadas = await db.delete(
+      'solicitudes_pendientes',
+      where: 'idUsuario = ? AND sincronizado = 1',
+      whereArgs: [idUsuario],
+    );
+    
+    print('$eliminadas solicitudes sincronizadas eliminadas');
   }
 
   // ==================== CACHE DE SOLICITUDES ====================
@@ -243,7 +254,6 @@ class DatabaseHelper {
   Future<void> guardarSolicitudesCache(List<Map<String, dynamic>> solicitudes) async {
     final db = await database;
     
-    // Limpiar cache anterior del usuario
     if (solicitudes.isNotEmpty) {
       await db.delete(
         'solicitudes_cache',
@@ -252,7 +262,6 @@ class DatabaseHelper {
       );
     }
     
-    // Guardar nuevas
     for (var solicitud in solicitudes) {
       await db.insert(
         'solicitudes_cache',
@@ -264,7 +273,7 @@ class DatabaseHelper {
       );
     }
     
-    print('✅ ${solicitudes.length} solicitudes guardadas en cache');
+    print('${solicitudes.length} solicitudes guardadas en cache');
   }
 
   Future<List<Map<String, dynamic>>> obtenerSolicitudesCache(int idUsuario) async {
@@ -283,7 +292,7 @@ class DatabaseHelper {
   Future<void> guardarFertilizantesCache(List<String> fertilizantes) async {
     final db = await database;
     
-    await db.delete('fertilizantes_cache'); // Limpiar cache
+    await db.delete('fertilizantes_cache');
     
     for (var fertilizante in fertilizantes) {
       await db.insert(
@@ -296,7 +305,7 @@ class DatabaseHelper {
       );
     }
     
-    print('${fertilizantes.length} fertilizantes guardados en cache');
+    print('$fertilizantes.length fertilizantes guardados en cache');
   }
 
   Future<List<String>> obtenerFertilizantesCache() async {
@@ -308,13 +317,11 @@ class DatabaseHelper {
 
   // ==================== DEBUG Y MANTENIMIENTO ====================
   
-  /// NUEVO: Listar todos los usuarios (para debug)
   Future<List<Map<String, dynamic>>> listarTodosLosUsuarios() async {
     final db = await database;
     return await db.query('usuarios');
   }
 
-  /// NUEVO: Resetear base de datos (solo para desarrollo)
   Future<void> resetearBaseDatos() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'ferti_go.db');
@@ -323,12 +330,10 @@ class DatabaseHelper {
     print('Base de datos eliminada');
     
     _database = null;
-    await database; // Recrear
-    print('✅ Base de datos recreada');
+    await database;
+    print('Base de datos recreada');
   }
 
-  // ==================== LIMPIEZA ====================
-  
   Future<void> limpiarCache() async {
     final db = await database;
     
