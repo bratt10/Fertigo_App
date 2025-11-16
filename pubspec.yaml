@@ -7,16 +7,17 @@ version: 1.0.0+1
 environment:
   sdk: ^3.9.2
 
-dependencies: # <-- Esta es la ÚNICA sección 'dependencies'
+dependencies: 
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
   http: ^1.2.0
-  shared_preferences: ^2.5.3
 
-  sqflite: ^2.3.0           # Base de datos SQLite
+  sqflite: ^2.3.0           
   path: ^1.8.3              # Manejo de rutas de archivos
   connectivity_plus: ^5.0.2  # Detector de conectividad
+  shared_preferences: ^2.2.2
+
 
 
 dev_dependencies:

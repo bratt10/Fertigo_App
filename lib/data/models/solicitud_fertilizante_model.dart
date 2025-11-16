@@ -5,11 +5,12 @@ class SolicitudFertilizanteModel {
   final String tipoFertilizante;
   final double cantidad;
   final String fechaRequerida;
+  final String? fechaSolicitud; // ⭐ NUEVO: Fecha en que se creó la solicitud
   final String motivo;
   final String notas;
   final String prioridad;
   final String estado;
-  final int idUsuario; // ✅ Ya no es nullable
+  final int idUsuario;
 
   SolicitudFertilizanteModel({
     required this.idSolicitud,
@@ -18,11 +19,12 @@ class SolicitudFertilizanteModel {
     required this.tipoFertilizante,
     required this.cantidad,
     required this.fechaRequerida,
+    this.fechaSolicitud, // ⭐ Campo opcional - se recibe del backend
     required this.motivo,
     required this.notas,
     required this.prioridad,
     required this.estado,
-    required this.idUsuario, // ✅ Ahora es requerido
+    required this.idUsuario,
   });
 
   factory SolicitudFertilizanteModel.fromJson(Map<String, dynamic> json) {
@@ -39,21 +41,16 @@ class SolicitudFertilizanteModel {
         }
       }
 
-      // ✅ Extraer ID de usuario - maneja múltiples casos
+      // Extraer ID de usuario - maneja múltiples casos
       int userId = 0;
       
-      // Caso 1: idUsuario directo en el JSON
       if (json['idUsuario'] != null) {
         userId = json['idUsuario'] is int 
             ? json['idUsuario'] 
             : int.tryParse(json['idUsuario'].toString()) ?? 0;
-      } 
-      // Caso 2: objeto usuario anidado con id
-      else if (json['usuario'] != null && json['usuario'] is Map) {
+      } else if (json['usuario'] != null && json['usuario'] is Map) {
         userId = json['usuario']['id'] ?? json['usuario']['idUsuario'] ?? 0;
-      }
-      // Caso 3: usuario_id (snake_case)
-      else if (json['usuario_id'] != null) {
+      } else if (json['usuario_id'] != null) {
         userId = json['usuario_id'] is int
             ? json['usuario_id']
             : int.tryParse(json['usuario_id'].toString()) ?? 0;
@@ -68,6 +65,7 @@ class SolicitudFertilizanteModel {
         tipoFertilizante: json['tipoFertilizante']?.toString() ?? 'Sin especificar',
         cantidad: cantidadParsed,
         fechaRequerida: json['fechaRequerida']?.toString() ?? 'Sin fecha',
+        fechaSolicitud: json['fechaSolicitud']?.toString(), // ⭐ Se recibe del backend
         motivo: json['motivo']?.toString() ?? '',
         notas: json['notas']?.toString() ?? '',
         prioridad: json['prioridad']?.toString() ?? 'Media',
@@ -78,7 +76,6 @@ class SolicitudFertilizanteModel {
       print('❌ Error parseando solicitud: $e');
       print('📦 JSON problemático: $json');
       
-      // ✅ Incluso en error, devolvemos un idUsuario válido
       return SolicitudFertilizanteModel(
         idSolicitud: 0,
         finca: 'Error',
@@ -86,17 +83,40 @@ class SolicitudFertilizanteModel {
         tipoFertilizante: 'Error al cargar',
         cantidad: 0.0,
         fechaRequerida: 'Error',
+        fechaSolicitud: null, // ⭐ null en caso de error
         motivo: '',
         notas: '',
         prioridad: 'Media',
         estado: 'ERROR',
-        idUsuario: 0, // ✅ Valor por defecto en caso de error
+        idUsuario: 0,
       );
+    }
+  }
+
+  // ⭐ Método auxiliar para mostrar la fecha de solicitud formateada
+  String get fechaSolicitudFormateada {
+    if (fechaSolicitud == null) return 'Sin fecha';
+    try {
+      final fecha = DateTime.parse(fechaSolicitud!);
+      return '${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour.toString().padLeft(2, '0')}:${fecha.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return fechaSolicitud!;
+    }
+  }
+
+  // Método auxiliar para obtener solo la fecha (sin hora)
+  String get fechaSolicitudSoloFecha {
+    if (fechaSolicitud == null) return 'Sin fecha';
+    try {
+      final fecha = DateTime.parse(fechaSolicitud!);
+      return '${fecha.day}/${fecha.month}/${fecha.year}';
+    } catch (e) {
+      return fechaSolicitud!;
     }
   }
 
   @override
   String toString() {
-    return 'Solicitud #$idSolicitud: $tipoFertilizante ($cantidad kg) - $estado [Usuario: $idUsuario]';
+    return 'Solicitud #$idSolicitud: $tipoFertilizante ($cantidad kg) - $estado [Usuario: $idUsuario] [Creada: ${fechaSolicitudFormateada}]';
   }
 }

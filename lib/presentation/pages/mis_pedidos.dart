@@ -1,3 +1,4 @@
+// ...existing code...
 import 'package:flutter/material.dart';
 import 'package:ferti_go/data/models/solicitud_fertilizante_model.dart';
 import 'package:ferti_go/data/services/solicitud_service.dart';
@@ -17,6 +18,10 @@ class MisPedidosPage extends StatefulWidget {
 class _MisPedidosPageState extends State<MisPedidosPage> {
   final SolicitudService _service = SolicitudService();
   late Future<List<SolicitudFertilizanteModel>> _futureSolicitudes;
+  
+  // 🔍 Variables para filtros
+  String _filtroEstado = 'TODAS';
+  String _filtroFechaSolicitud = 'TODAS'; // ⭐ Cuándo se creó la solicitud
 
   @override
   void initState() {
@@ -32,6 +37,305 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
 
   Future<void> _refrescar() async {
     _cargarSolicitudes();
+  }
+
+  // 🔍 Aplicar filtros
+  List<SolicitudFertilizanteModel> _aplicarFiltros(List<SolicitudFertilizanteModel> solicitudes) {
+    List<SolicitudFertilizanteModel> resultado = List.from(solicitudes);
+    
+    // Filtro por estado
+    if (_filtroEstado != 'TODAS') {
+      resultado = resultado.where((s) => s.estado.toUpperCase() == _filtroEstado).toList();
+    }
+    
+    // ⭐ Filtro por fecha de solicitud (cuándo se creó)
+    if (_filtroFechaSolicitud != 'TODAS') {
+      final ahora = DateTime.now();
+      resultado = resultado.where((s) {
+        if (s.fechaSolicitud == null) return false;
+        
+        try {
+          final fechaSolicitud = DateTime.parse(s.fechaSolicitud!);
+          
+          switch (_filtroFechaSolicitud) {
+            case 'HOY':
+              return fechaSolicitud.year == ahora.year &&
+                     fechaSolicitud.month == ahora.month &&
+                     fechaSolicitud.day == ahora.day;
+            
+            case 'ESTA_SEMANA':
+              final inicioSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+              final finSemana = inicioSemana.add(const Duration(days: 6));
+              return fechaSolicitud.isAfter(inicioSemana.subtract(const Duration(days: 1))) &&
+                     fechaSolicitud.isBefore(finSemana.add(const Duration(days: 1)));
+            
+            case 'ESTE_MES':
+              return fechaSolicitud.year == ahora.year &&
+                     fechaSolicitud.month == ahora.month;
+            
+            case 'ULTIMOS_7_DIAS':
+              final hace7Dias = ahora.subtract(const Duration(days: 7));
+              return fechaSolicitud.isAfter(hace7Dias);
+            
+            default:
+              return true;
+          }
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+    }
+    
+    return resultado;
+  }
+
+  void _mostrarFiltros() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(25),
+            topRight: Radius.circular(25),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green[700],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(25),
+                  topRight: Radius.circular(25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_list, color: Colors.white, size: 28),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Filtrar Solicitudes',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Filtros
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filtro por Estado
+                    const Text(
+                      'Estado',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildChipFiltro(
+                          'TODAS',
+                          _filtroEstado == 'TODAS',
+                          Colors.grey,
+                          onTap: () {
+                            setState(() => _filtroEstado = 'TODAS');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'PENDIENTE',
+                          _filtroEstado == 'PENDIENTE',
+                          Colors.orange,
+                          onTap: () {
+                            setState(() => _filtroEstado = 'PENDIENTE');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'APROBADA',
+                          _filtroEstado == 'APROBADA',
+                          Colors.green,
+                          onTap: () {
+                            setState(() => _filtroEstado = 'APROBADA');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'RECHAZADA',
+                          _filtroEstado == 'RECHAZADA',
+                          Colors.red,
+                          onTap: () {
+                            setState(() => _filtroEstado = 'RECHAZADA');
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    
+                    // ⭐ NUEVO: Filtro por Fecha de Solicitud (cuándo se creó)
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time, size: 20, color: Colors.blue),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Fecha de Creación',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Cuándo se creó la solicitud',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildChipFiltro(
+                          'TODAS',
+                          _filtroFechaSolicitud == 'TODAS',
+                          Colors.grey,
+                          onTap: () {
+                            setState(() => _filtroFechaSolicitud = 'TODAS');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'HOY',
+                          _filtroFechaSolicitud == 'HOY',
+                          Colors.blue,
+                          onTap: () {
+                            setState(() => _filtroFechaSolicitud = 'HOY');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'ESTA SEMANA',
+                          _filtroFechaSolicitud == 'ESTA_SEMANA',
+                          Colors.purple,
+                          onTap: () {
+                            setState(() => _filtroFechaSolicitud = 'ESTA_SEMANA');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'ESTE MES',
+                          _filtroFechaSolicitud == 'ESTE_MES',
+                          Colors.indigo,
+                          onTap: () {
+                            setState(() => _filtroFechaSolicitud = 'ESTE_MES');
+                            Navigator.pop(context);
+                          },
+                        ),
+                        _buildChipFiltro(
+                          'ÚLTIMOS 7 DÍAS',
+                          _filtroFechaSolicitud == 'ULTIMOS_7_DIAS',
+                          Colors.cyan,
+                          onTap: () {
+                            setState(() => _filtroFechaSolicitud = 'ULTIMOS_7_DIAS');
+                            Navigator.pop(context);
+                          },
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Botón limpiar filtros
+                    if (_filtroEstado != 'TODAS' || _filtroFechaSolicitud != 'TODAS')
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            setState(() {
+                              _filtroEstado = 'TODAS';
+                              _filtroFechaSolicitud = 'TODAS';
+                            });
+                            Navigator.pop(context);
+                          },
+                          icon: const Icon(Icons.clear_all),
+                          label: const Text('Limpiar Todos los Filtros'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChipFiltro(String label, bool seleccionado, Color color, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: seleccionado ? color : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color,
+            width: 2,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: seleccionado ? Colors.white : color,
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
   }
 
   Color _getColorPrioridad(String prioridad) {
@@ -69,7 +373,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Container(
-            constraints: const BoxConstraints(maxHeight: 600),
+            constraints: const BoxConstraints(maxHeight: 650),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -146,6 +450,16 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                           ),
                         ),
                         const SizedBox(height: 24),
+                        
+                        // ⭐ Mostrar fecha de solicitud si existe
+                        if (s.fechaSolicitud != null)
+                          _buildDetalleItem(
+                            'Fecha de Creación',
+                            s.fechaSolicitudFormateada,
+                            Icons.access_time,
+                            color: Colors.blue,
+                          ),
+                        
                         _buildDetalleItem(
                           'Tipo de Fertilizante',
                           s.tipoFertilizante,
@@ -561,6 +875,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                     finca: s.finca,
                     ubicacion: s.ubicacion,
                     idUsuario: s.idUsuario,
+                    fechaSolicitud: s.fechaSolicitud, // Mantener fecha original
                   );
 
                   await _service.actualizarSolicitud(
@@ -678,6 +993,45 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                             ),
                           ),
                           const Spacer(),
+                          
+                          // 🔍 Botón de filtros
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.filter_list, size: 28),
+                                  color: Colors.green[700],
+                                  onPressed: _mostrarFiltros,
+                                ),
+                                if (_filtroEstado != 'TODAS' || _filtroFechaSolicitud != 'TODAS')
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      width: 12,
+                                      height: 12,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          
                           IconButton(
                             icon: const Icon(
                               Icons.arrow_back, 
@@ -826,17 +1180,117 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                           );
                         }
 
-                        final solicitudes = snapshot.data!;
-                        return ListView.builder(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          itemCount: solicitudes.length,
-                          itemBuilder: (context, index) {
-                            final s = solicitudes[index];
-                            return _buildSolicitudCard(s);
-                          },
+                        // 🔍 Aplicar filtros
+                        final todasLasSolicitudes = snapshot.data!;
+                        final solicitudesFiltradas = _aplicarFiltros(todasLasSolicitudes);
+
+                        // Mostrar mensaje si no hay resultados después del filtro
+                        if (solicitudesFiltradas.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.search_off,
+                                  size: 80,
+                                  color: Colors.white.withOpacity(0.7),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No hay resultados',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No se encontraron solicitudes con estos filtros',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.7),
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 24),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _filtroEstado = 'TODAS';
+                                      _filtroFechaSolicitud = 'TODAS';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.clear_all),
+                                  label: const Text('Limpiar Filtros'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: Colors.green[700],
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 12,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            // Indicador de filtros activos
+                            if (_filtroEstado != 'TODAS' || _filtroFechaSolicitud != 'TODAS')
+                              Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.9),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.filter_alt, color: Colors.green, size: 20),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Mostrando ${solicitudesFiltradas.length} de ${todasLasSolicitudes.length} solicitudes',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _filtroEstado = 'TODAS';
+                                          _filtroFechaSolicitud = 'TODAS';
+                                        });
+                                      },
+                                      child: const Text(
+                                        'Limpiar',
+                                        style: TextStyle(fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                itemCount: solicitudesFiltradas.length,
+                                itemBuilder: (context, index) {
+                                  final s = solicitudesFiltradas[index];
+                                  return _buildSolicitudCard(s);
+                                },
+                              ),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -988,6 +1442,29 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
                   ],
                 ),
               ),
+              
+              // ⭐ Mostrar fecha de solicitud en la card si existe
+              if (s.fechaSolicitud != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 14,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Creada: ${s.fechaSolicitudSoloFecha}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              
               if (s.motivo.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -1056,3 +1533,4 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
     );
   }
 }
+// ...existing code...
