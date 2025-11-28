@@ -5,7 +5,7 @@ class SolicitudFertilizanteModel {
   final String tipoFertilizante;
   final double cantidad;
   final String fechaRequerida;
-  final String? fechaSolicitud; // ⭐ NUEVO: Fecha en que se creó la solicitud
+  final String? fechaSolicitud;
   final String motivo;
   final String notas;
   final String prioridad;
@@ -19,7 +19,7 @@ class SolicitudFertilizanteModel {
     required this.tipoFertilizante,
     required this.cantidad,
     required this.fechaRequerida,
-    this.fechaSolicitud, // ⭐ Campo opcional - se recibe del backend
+    this.fechaSolicitud,
     required this.motivo,
     required this.notas,
     required this.prioridad,
@@ -29,7 +29,21 @@ class SolicitudFertilizanteModel {
 
   factory SolicitudFertilizanteModel.fromJson(Map<String, dynamic> json) {
     try {
-      // Parsear cantidad de forma segura
+      print('🔍 JSON recibido: $json');
+      
+      // ⭐ CORRECCIÓN 1: Leer ID con snake_case PRIMERO
+      int solicitudId = 0;
+      if (json['id_solicitud'] != null) {  // ⭐ Backend usa snake_case
+        solicitudId = json['id_solicitud'] is int 
+            ? json['id_solicitud'] 
+            : int.tryParse(json['id_solicitud'].toString()) ?? 0;
+      } else if (json['idSolicitud'] != null) {  // Fallback camelCase
+        solicitudId = json['idSolicitud'] is int 
+            ? json['idSolicitud'] 
+            : int.tryParse(json['idSolicitud'].toString()) ?? 0;
+      }
+
+      // Parsear cantidad
       double cantidadParsed = 0.0;
       if (json['cantidad'] != null) {
         if (json['cantidad'] is int) {
@@ -41,40 +55,55 @@ class SolicitudFertilizanteModel {
         }
       }
 
-      // Extraer ID de usuario - maneja múltiples casos
-      int userId = 0;
+      // ⭐ CORRECCIÓN 2: Leer tipo con snake_case PRIMERO
+      String tipoFert = '';
+      if (json['tipo_fertilizante'] != null) {  // ⭐ Backend usa snake_case
+        tipoFert = json['tipo_fertilizante'].toString();
+      } else if (json['tipoFertilizante'] != null) {  // Fallback camelCase
+        tipoFert = json['tipoFertilizante'].toString();
+      }
       
+      if (tipoFert.isEmpty) {
+        tipoFert = 'Sin especificar';
+      }
+
+      // Extraer ID de usuario
+      int userId = 0;
       if (json['idUsuario'] != null) {
         userId = json['idUsuario'] is int 
             ? json['idUsuario'] 
             : int.tryParse(json['idUsuario'].toString()) ?? 0;
       } else if (json['usuario'] != null && json['usuario'] is Map) {
-        userId = json['usuario']['id'] ?? json['usuario']['idUsuario'] ?? 0;
-      } else if (json['usuario_id'] != null) {
-        userId = json['usuario_id'] is int
-            ? json['usuario_id']
-            : int.tryParse(json['usuario_id'].toString()) ?? 0;
+        final usuarioMap = json['usuario'] as Map<String, dynamic>;
+        userId = usuarioMap['id'] ?? usuarioMap['idUsuario'] ?? 0;
       }
 
-      print('🔍 Parseando solicitud #${json['idSolicitud']} -> Usuario ID: $userId');
+      print('✅ Solicitud parseada:');
+      print('   - ID Solicitud: $solicitudId');
+      print('   - Tipo: $tipoFert');
+      print('   - Usuario ID: $userId');
 
       return SolicitudFertilizanteModel(
-        idSolicitud: json['idSolicitud'] ?? json['id'] ?? 0,
+        idSolicitud: solicitudId,
         finca: json['finca']?.toString() ?? 'Sin finca',
         ubicacion: json['ubicacion']?.toString() ?? 'Sin ubicación',
-        tipoFertilizante: json['tipoFertilizante']?.toString() ?? 'Sin especificar',
+        tipoFertilizante: tipoFert,
         cantidad: cantidadParsed,
-        fechaRequerida: json['fechaRequerida']?.toString() ?? 'Sin fecha',
-        fechaSolicitud: json['fechaSolicitud']?.toString(), // ⭐ Se recibe del backend
+        fechaRequerida: json['fecha_requerida']?.toString() ?? 
+                        json['fechaRequerida']?.toString() ?? 
+                        'Sin fecha',
+        fechaSolicitud: json['fecha_solicitud']?.toString() ?? 
+                        json['fechaSolicitud']?.toString(),
         motivo: json['motivo']?.toString() ?? '',
         notas: json['notas']?.toString() ?? '',
         prioridad: json['prioridad']?.toString() ?? 'Media',
         estado: json['estado']?.toString() ?? 'PENDIENTE',
         idUsuario: userId,
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ Error parseando solicitud: $e');
       print('📦 JSON problemático: $json');
+      print('📚 StackTrace: $stackTrace');
       
       return SolicitudFertilizanteModel(
         idSolicitud: 0,
@@ -83,7 +112,7 @@ class SolicitudFertilizanteModel {
         tipoFertilizante: 'Error al cargar',
         cantidad: 0.0,
         fechaRequerida: 'Error',
-        fechaSolicitud: null, // ⭐ null en caso de error
+        fechaSolicitud: null,
         motivo: '',
         notas: '',
         prioridad: 'Media',
@@ -93,7 +122,21 @@ class SolicitudFertilizanteModel {
     }
   }
 
-  // ⭐ Método auxiliar para mostrar la fecha de solicitud formateada
+  // ⭐ Método para convertir a JSON al ACTUALIZAR (usa camelCase porque backend acepta ambos)
+  Map<String, dynamic> toJson() {
+    return {
+      'tipoFertilizante': tipoFertilizante,
+      'cantidad': cantidad,
+      'fechaRequerida': fechaRequerida,
+      'prioridad': prioridad,
+      'motivo': motivo,
+      'notas': notas,
+      'finca': finca,
+      'ubicacion': ubicacion,
+      'estado': estado,
+    };
+  }
+
   String get fechaSolicitudFormateada {
     if (fechaSolicitud == null) return 'Sin fecha';
     try {
@@ -104,7 +147,6 @@ class SolicitudFertilizanteModel {
     }
   }
 
-  // Método auxiliar para obtener solo la fecha (sin hora)
   String get fechaSolicitudSoloFecha {
     if (fechaSolicitud == null) return 'Sin fecha';
     try {
@@ -117,6 +159,6 @@ class SolicitudFertilizanteModel {
 
   @override
   String toString() {
-    return 'Solicitud #$idSolicitud: $tipoFertilizante ($cantidad kg) - $estado [Usuario: $idUsuario] [Creada: ${fechaSolicitudFormateada}]';
+    return 'Solicitud #$idSolicitud: $tipoFertilizante ($cantidad kg) - $estado [Usuario: $idUsuario]';
   }
 }
