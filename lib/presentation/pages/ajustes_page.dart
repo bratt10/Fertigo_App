@@ -62,6 +62,8 @@ class AjustesPage extends StatelessWidget {
               image: DecorationImage(
                 image: AssetImage('assets/images/agricultor2.jpg'),
                 fit: BoxFit.cover,
+                alignment: Alignment(-0.4, 0),
+
               ),
             ),
           ),
