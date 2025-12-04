@@ -5,7 +5,7 @@ import 'package:ferti_go/data/services/database_helper.dart';
 import 'package:ferti_go/data/services/connectivity_service.dart';
 
 class ConexionLoginOffline {
-  static final String baseUrl = 'https://fertigo-production.up.railway.app/app';
+  static final String baseUrl = 'https://fertigo-production-0cf0.up.railway.app/app';
   static final DatabaseHelper _dbHelper = DatabaseHelper();
   static final ConnectivityService _connectivityService = ConnectivityService();
 

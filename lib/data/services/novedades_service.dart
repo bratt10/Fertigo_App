@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class NovedadesService {
-  static final String apiUrl = "https://fertigo-production.up.railway.app/novedades";
+  static final String apiUrl = "https://fertigo-production-0cf0.up.railway.app/novedades";
 
   static Future<bool> enviarNovedad({
     required String nombre,

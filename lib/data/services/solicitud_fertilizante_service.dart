@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 class SolicitudFertilizanteService {
-  static final String baseUrl = "https://fertigo-production.up.railway.app";
+  static final String baseUrl = "https://fertigo-production-0cf0.up.railway.app";
 
   // ==================== OBTENER TIPOS DE FERTILIZANTES ====================
   Future<List<String>> obtenerTiposFertilizantes() async {

@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class SolicitudFertilizanteOfflineService {
-  static final String baseUrl = "https://fertigo-production.up.railway.app";
+  static final String baseUrl = "https://fertigo-production-0cf0.up.railway.app";
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ConnectivityService _connectivityService = ConnectivityService();
 

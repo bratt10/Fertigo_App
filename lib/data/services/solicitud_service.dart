@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/solicitud_fertilizante_model.dart';
 
 class SolicitudService {
-  static final String baseUrl = "https://fertigo-production.up.railway.app/solicitudFertilizante";
+  static final String baseUrl = "https://fertigo-production-0cf0.up.railway.app/solicitudFertilizante";
 
   Future<List<SolicitudFertilizanteModel>> obtenerSolicitudes() async {
     try {

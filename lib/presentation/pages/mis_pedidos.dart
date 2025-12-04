@@ -21,7 +21,7 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
   
   // 🔍 Variables para filtros
   String _filtroEstado = 'TODAS';
-  String _filtroFechaSolicitud = 'TODAS'; // ⭐ Cuándo se creó la solicitud
+  String _filtroFechaSolicitud = 'TODAS'; 
 
   @override
   void initState() {
@@ -1533,4 +1533,3 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
     );
   }
 }
-// ...existing code...

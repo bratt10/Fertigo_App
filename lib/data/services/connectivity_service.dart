@@ -22,7 +22,7 @@ class ConnectivityService {
     try {
       // En lugar de Socket.connect, hacemos una petición HTTP ligera
       final response = await http.head(
-        Uri.parse('https://fertigo-production.up.railway.app/fertilizante'),
+        Uri.parse('https://fertigo-production-0cf0.up.railway.app/fertilizante'),
       ).timeout(const Duration(seconds: 5));
       
       // Si el servidor responde con cualquier código < 500, está disponible
