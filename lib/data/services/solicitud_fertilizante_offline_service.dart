@@ -10,7 +10,7 @@ class SolicitudFertilizanteOfflineService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ConnectivityService _connectivityService = ConnectivityService();
 
-  // ==================== OBTENER TIPOS DE FERTILIZANTES ====================
+  // OBTENER TIPOS DE FERTILIZANTES 
   
   Future<List<String>> obtenerTiposFertilizantes() async {
     final hayConexion = await _connectivityService.checkConnection();

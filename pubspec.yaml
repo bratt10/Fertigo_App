@@ -14,19 +14,24 @@ dependencies:
   http: ^1.2.0
 
   sqflite: ^2.3.0           
-  path: ^1.8.3              # Manejo de rutas de archivos
-  connectivity_plus: ^5.0.2  # Detector de conectividad
+  path: ^1.8.3
+  connectivity_plus: ^5.0.2
   shared_preferences: ^2.2.2
-
-
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon.png"
 
 flutter:
   uses-material-design: true
 
   assets:
+    - assets/images/Icon.png          # 👈 AGREGA ESTA LÍNEA
     - assets/images/
