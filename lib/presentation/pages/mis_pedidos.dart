@@ -635,306 +635,538 @@ class _MisPedidosPageState extends State<MisPedidosPage> {
       ),
     );
   }
+// ==================== FUNCIÓN ELIMINAR - COPIA ESTA COMPLETA ====================
+void _eliminarSolicitud(SolicitudFertilizanteModel s) {
+  showDialog(
+    context: context,
+    builder: (confirmContext) => AlertDialog(
+      title: const Text('¿Eliminar solicitud?'),
+      content: Text(
+        '¿Estás seguro de eliminar la solicitud de ${s.tipoFertilizante}?\n\nEsta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(confirmContext).pop(),
+          child: const Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            // 1. Cerrar diálogo de confirmación
+            Navigator.of(confirmContext).pop();
+            
+            // 2. Guardar BuildContext antes de async
+            final mainContext = context;
+            
+            // 3. Mostrar loading
+            showDialog(
+              context: mainContext,
+              barrierDismissible: false,
+              builder: (loadingContext) => WillPopScope(
+                onWillPop: () async => false,
+                child: const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              ),
+            );
 
-  void _eliminarSolicitud(SolicitudFertilizanteModel s) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar solicitud?'),
-        content: Text(
-          '¿Estás seguro de eliminar la solicitud de ${s.tipoFertilizante}?\n\nEsta acción no se puede deshacer.',
+            // 4. Ejecutar eliminación
+            try {
+              await _service.eliminarSolicitud(s.idSolicitud, widget.idUsuario);
+              
+              // 5. Cerrar loading - IMPORTANTE: verificar si el widget aún existe
+              if (mounted) {
+                Navigator.of(mainContext).pop();
+                
+                // 6. Refrescar datos
+                _refrescar();
+                
+                // 7. Mostrar diálogo de éxito
+                showDialog(
+                  context: mainContext,
+                  barrierDismissible: false,
+                  builder: (successContext) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          '¡Eliminado con éxito!',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'La solicitud #${s.idSolicitud} ha sido eliminada correctamente',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(successContext).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          child: const Text('Aceptar'),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            } catch (e) {
+              // 8. Cerrar loading en caso de error
+              if (mounted) {
+                Navigator.of(mainContext).pop();
+                
+                // 9. Mostrar diálogo de error
+                showDialog(
+                  context: mainContext,
+                  builder: (errorContext) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Error al eliminar',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          e.toString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(errorContext).pop(),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.grey,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text('Cancelar'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(errorContext).pop();
+                                _eliminarSolicitud(s);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                              child: const Text('Reintentar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Eliminar'),
+        ),
+      ],
+    ),
+  );
+}
+
+// ==================== FUNCIÓN EDITAR - COPIA ESTA COMPLETA ====================
+void _editarSolicitud(SolicitudFertilizanteModel s) {
+  final cantidadController = TextEditingController(text: s.cantidad.toString());
+  final motivoController = TextEditingController(text: s.motivo);
+  final notasController = TextEditingController(text: s.notas);
+  
+  String tipoSeleccionado = s.tipoFertilizante;
+  String prioridadSeleccionada = s.prioridad;
+  DateTime fechaSeleccionada = DateTime.parse(s.fechaRequerida);
+
+  List<String> opcionesFertilizantes = ['Urea', 'NPK', 'Fosfato', 'Potasio', 'Orgánico'];
+  if (!opcionesFertilizantes.contains(tipoSeleccionado)) {
+    opcionesFertilizantes.add(tipoSeleccionado);
+  }
+
+  showDialog(
+    context: context,
+    builder: (editContext) => StatefulBuilder(
+      builder: (builderContext, setDialogState) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.edit, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Editar Solicitud #${s.idSolicitud}',
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: tipoSeleccionado,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Fertilizante',
+                  prefixIcon: Icon(Icons.grass),
+                ),
+                items: opcionesFertilizantes
+                    .map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => tipoSeleccionado = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: cantidadController,
+                decoration: const InputDecoration(
+                  labelText: 'Cantidad (kg)',
+                  prefixIcon: Icon(Icons.scale),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.calendar_today),
+                title: const Text('Fecha Requerida'),
+                subtitle: Text(
+                  '${fechaSeleccionada.day}/${fechaSeleccionada.month}/${fechaSeleccionada.year}',
+                ),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: builderContext,
+                    initialDate: fechaSeleccionada,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => fechaSeleccionada = picked);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: prioridadSeleccionada,
+                decoration: const InputDecoration(
+                  labelText: 'Prioridad',
+                  prefixIcon: Icon(Icons.flag),
+                ),
+                items: ['Alta', 'Media', 'Baja']
+                    .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setDialogState(() => prioridadSeleccionada = value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: motivoController,
+                decoration: const InputDecoration(
+                  labelText: 'Motivo',
+                  prefixIcon: Icon(Icons.comment),
+                ),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: notasController,
+                decoration: const InputDecoration(
+                  labelText: 'Notas',
+                  prefixIcon: Icon(Icons.note),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(editContext).pop(),
             child: const Text('Cancelar'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              // 1. Validar cantidad
+              final cantidad = double.tryParse(cantidadController.text);
+              if (cantidad == null || cantidad <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('❌ La cantidad debe ser un número válido mayor a 0'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+                return;
+              }
+
+              // 2. Cerrar diálogo de edición
+              Navigator.of(editContext).pop();
               
+              // 3. Guardar BuildContext antes de async
+              final mainContext = context;
+
+              // 4. Mostrar loading
               showDialog(
-                context: context,
+                context: mainContext,
                 barrierDismissible: false,
-                builder: (context) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                builder: (loadingContext) => WillPopScope(
+                  onWillPop: () async => false,
+                  child: const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  ),
                 ),
               );
 
+              // 5. Ejecutar actualización
               try {
-                await _service.eliminarSolicitud(s.idSolicitud, widget.idUsuario);
-                
-                if (!mounted) return;
-                Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        const Icon(Icons.check_circle, color: Colors.white),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text('✅ Solicitud #${s.idSolicitud} eliminada correctamente'),
-                        ),
-                      ],
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-                
-                _refrescar();
-              } catch (e) {
-                if (!mounted) return;
-                Navigator.pop(context);
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        const Icon(Icons.error, color: Colors.white),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text('❌ Error: ${e.toString()}')),
-                      ],
-                    ),
-                    backgroundColor: Colors.red,
-                    duration: const Duration(seconds: 5),
-                    action: SnackBarAction(
-                      label: 'Reintentar',
-                      textColor: Colors.white,
-                      onPressed: () => _eliminarSolicitud(s),
-                    ),
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Eliminar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editarSolicitud(SolicitudFertilizanteModel s) {
-    final cantidadController = TextEditingController(text: s.cantidad.toString());
-    final motivoController = TextEditingController(text: s.motivo);
-    final notasController = TextEditingController(text: s.notas);
-    
-    String tipoSeleccionado = s.tipoFertilizante;
-    String prioridadSeleccionada = s.prioridad;
-    DateTime fechaSeleccionada = DateTime.parse(s.fechaRequerida);
-
-    List<String> opcionesFertilizantes = ['Urea', 'NPK', 'Fosfato', 'Potasio', 'Orgánico'];
-    if (!opcionesFertilizantes.contains(tipoSeleccionado)) {
-      opcionesFertilizantes.add(tipoSeleccionado);
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.edit, color: Colors.blue),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Editar Solicitud #${s.idSolicitud}',
-                  style: const TextStyle(fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  value: tipoSeleccionado,
-                  decoration: const InputDecoration(
-                    labelText: 'Tipo de Fertilizante',
-                    prefixIcon: Icon(Icons.grass),
-                  ),
-                  items: opcionesFertilizantes
-                      .map((tipo) => DropdownMenuItem(value: tipo, child: Text(tipo)))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() => tipoSeleccionado = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: cantidadController,
-                  decoration: const InputDecoration(
-                    labelText: 'Cantidad (kg)',
-                    prefixIcon: Icon(Icons.scale),
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.calendar_today),
-                  title: const Text('Fecha Requerida'),
-                  subtitle: Text(
-                    '${fechaSeleccionada.day}/${fechaSeleccionada.month}/${fechaSeleccionada.year}',
-                  ),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: fechaSeleccionada,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setDialogState(() => fechaSeleccionada = picked);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: prioridadSeleccionada,
-                  decoration: const InputDecoration(
-                    labelText: 'Prioridad',
-                    prefixIcon: Icon(Icons.flag),
-                  ),
-                  items: ['Alta', 'Media', 'Baja']
-                      .map((p) => DropdownMenuItem(value: p, child: Text(p)))
-                      .toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setDialogState(() => prioridadSeleccionada = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: motivoController,
-                  decoration: const InputDecoration(
-                    labelText: 'Motivo',
-                    prefixIcon: Icon(Icons.comment),
-                  ),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: notasController,
-                  decoration: const InputDecoration(
-                    labelText: 'Notas',
-                    prefixIcon: Icon(Icons.note),
-                  ),
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-
-                final cantidad = double.tryParse(cantidadController.text);
-                if (cantidad == null || cantidad <= 0) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('❌ La cantidad debe ser un número válido mayor a 0'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                  return;
-                }
-
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  ),
+                final solicitudActualizada = SolicitudFertilizanteModel(
+                  idSolicitud: s.idSolicitud,
+                  tipoFertilizante: tipoSeleccionado,
+                  cantidad: cantidad,
+                  fechaRequerida: fechaSeleccionada.toIso8601String().split('T')[0],
+                  prioridad: prioridadSeleccionada,
+                  estado: s.estado,
+                  motivo: motivoController.text.trim(),
+                  notas: notasController.text.trim(),
+                  finca: s.finca,
+                  ubicacion: s.ubicacion,
+                  idUsuario: s.idUsuario,
+                  fechaSolicitud: s.fechaSolicitud,
                 );
 
-                try {
-                  final solicitudActualizada = SolicitudFertilizanteModel(
-                    idSolicitud: s.idSolicitud,
-                    tipoFertilizante: tipoSeleccionado,
-                    cantidad: cantidad,
-                    fechaRequerida: fechaSeleccionada.toIso8601String().split('T')[0],
-                    prioridad: prioridadSeleccionada,
-                    estado: s.estado,
-                    motivo: motivoController.text.trim(),
-                    notas: notasController.text.trim(),
-                    finca: s.finca,
-                    ubicacion: s.ubicacion,
-                    idUsuario: s.idUsuario,
-                    fechaSolicitud: s.fechaSolicitud, // Mantener fecha original
-                  );
+                await _service.actualizarSolicitud(
+                  s.idSolicitud,
+                  widget.idUsuario,
+                  solicitudActualizada,
+                );
 
-                  await _service.actualizarSolicitud(
-                    s.idSolicitud,
-                    widget.idUsuario,
-                    solicitudActualizada,
-                  );
+                // 6. Cerrar loading - IMPORTANTE: verificar si el widget aún existe
+                if (mounted) {
+                  Navigator.of(mainContext).pop();
+                  
+                  // 7. Refrescar datos
+                  _refrescar();
 
-                  if (!mounted) return;
-                  Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
+                  // 8. Mostrar diálogo de éxito
+                  showDialog(
+                    context: mainContext,
+                    barrierDismissible: false,
+                    builder: (successContext) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.check_circle, color: Colors.white),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text('✅ Solicitud #${s.idSolicitud} actualizada correctamente'),
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            '¡Actualizado con éxito!',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'La solicitud #${s.idSolicitud} ha sido actualizada correctamente',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
                           ),
                         ],
                       ),
-                      backgroundColor: Colors.green,
-                      duration: const Duration(seconds: 3),
-                    ),
-                  );
-
-                  _refrescar();
-                } catch (e) {
-                  if (!mounted) return;
-                  Navigator.pop(context);
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.error, color: Colors.white),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text('❌ Error: ${e.toString()}')),
-                        ],
-                      ),
-                      backgroundColor: Colors.red,
-                      duration: const Duration(seconds: 5),
+                      actions: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.of(successContext).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text('Aceptar'),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Guardar Cambios'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+              } catch (e) {
+                // 9. Cerrar loading en caso de error
+                if (mounted) {
+                  Navigator.of(mainContext).pop();
 
+                  // 10. Mostrar diálogo de error
+                  showDialog(
+                    context: mainContext,
+                    builder: (errorContext) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Error al actualizar',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            e.toString(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                      actions: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.of(errorContext).pop(),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                child: const Text('Cancelar'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(errorContext).pop();
+                                  _editarSolicitud(s);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                ),
+                                child: const Text('Reintentar'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Guardar Cambios'),
+          ),
+        ],
+      ),
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
